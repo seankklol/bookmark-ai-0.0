@@ -50,3 +50,6 @@ export default defineConfig({
 ## Project Set Up (When you close and reopen ngrok)
 
 Next time you reopen this project, repeat steps #31~34 again.
+Run: ```npm run dev```, ```npx convex dev```, ```ngrok http ####```
+Open: Convex, Clerk, Polar(sandbox.polar.sh -- sandbox is for pre-production), localhost(faster)/ngrok(slow)
+Remember to git commit!!!

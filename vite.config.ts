@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [tailwindcss(), reactRouter(), tsconfigPaths()],
   server: {
     allowedHosts: [
-      "21f574b417f1.ngrok-free.app"
+      "34b79981b947.ngrok-free.app"
     ],
   }
 });
