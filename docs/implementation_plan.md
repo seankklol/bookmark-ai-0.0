@@ -5,8 +5,8 @@ This file now serves as an index to the per-task implementation files in `docs/i
 - [Task 01 — Decide product basics](implementation-plan/01-decide-product-basics.md)
 - [Task 02 — Initialize repo & Vercel preview](implementation-plan/02-initialize-repo-vercel.md)
 - [Task 03 — Provision Convex project/deployment](implementation-plan/03-provision-convex.md)
-- [Task 04 — Create Clerk project](implementation-plan/04-create-clerk-project.md)
-- [Task 05 — Create Polar org + product/price](implementation-plan/05-create-polar-product.md)
+- [Task 04 — Verify Vercel preview & SSR baseline](implementation-plan/04-create-clerk-project.md)
+- [Task 05 — Establish frontend design system baseline](implementation-plan/05-create-polar-product.md)
 - [Task 06 — Provision Qdrant (managed)](implementation-plan/06-provision-qdrant.md)
 - [Task 07 — Configure OpenAI & store secrets](implementation-plan/07-configure-openai-and-secrets.md)
 - [Task 08 — Define Convex schema for bookmarks](implementation-plan/08-define-convex-schema.md)
@@ -55,15 +55,16 @@ This file now serves as an index to the per-task implementation files in `docs/i
 
 ---
 
+
 # Phase 0 — Repo & Environment Setup
 
-1. Decide product basics: set **Product Name = “Bookmark AI”**, brand voice = warm, playful, plain English; **Pricing = USD \$9/month** (no trial). AC: Copy appears on landing/pricing; Polar plan created reflecting USD \$9.
+1. Decide product basics: set **Product Name = “Bookmark AI”**, brand voice = warm, playful, plain English; **Pricing = USD \$19.99/month** (no trial). AC: Copy appears on landing/pricing; Polar plan created reflecting USD \$19.99.
 2. Initialize repo from template (RSK) and rename to `bookmark-ai`; connect GitHub → Vercel with `@vercel/react-router` preset and SSR enabled. AC: PR to `main` triggers Vercel Preview successfully.
 3. Provision **Convex** project/deployment; record `CONVEX_DEPLOYMENT`, `VITE_CONVEX_URL`, and `NEXT_PUBLIC_CONVEX_URL` per template. AC: `npx convex dev` works locally; health check ok.
-4. Create **Clerk** project; obtain `VITE_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`; set JWT template for Convex and copy Issuer into Convex env. AC: Protected route returns 401 when logged out, 200 when logged in.
-5. Create **Polar** org + monthly product/price; obtain `POLAR_ACCESS_TOKEN`, `POLAR_ORGANIZATION_ID`. AC: Polar dashboard shows 1 active product/price.
+4. Verify **Vercel preview + SSR** baseline. AC: Preview URL renders the `dashboard` route without runtime errors; SSR is active (initial HTML includes dashboard shell); no secrets in client bundle (build grep shows none). Refs: `docs/app_flow_document.md`, `docs/frontend_guidelines_document.md`, `docs/backend_structure_document.md`.
+5. Establish **frontend design system baseline**. AC: Tokens/typography applied (Nunito 400/600/700, radius 12px, focus-visible rings); dashboard shell meets AA contrast; no console style warnings; hot reload works. Refs: `docs/frontend_guidelines_document.md`, `docs/app_flow_document.md`.
 6. Provision **Qdrant (managed)**; obtain `QDRANT_URL`, `QDRANT_API_KEY` for server-only use. AC: Server can auth to Qdrant via wrapper smoke test.
-7. Configure **OpenAI** `OPENAI_API_KEY`; set **FRONTEND\_URL** for local (ngrok if needed). Store all secrets in Convex/Vercel envs (server-only where applicable). AC: No secret referenced in client bundles (build grep shows none).
+7. Configure **OpenAI** `OPENAI_API_KEY`; set **FRONTEND_URL** for local (ngrok if needed). Store all secrets in Convex/Vercel envs (server-only where applicable). AC: No secret referenced in client bundles (build grep shows none).
 
 # Phase 1 — Schema, Normalization, Ingest (Optimistic) & Metadata
 
@@ -122,21 +123,17 @@ export const clientConfig = {
 
 AC: Static analysis shows no magic numbers elsewhere; imports compile. 36. Add **tunables** (e.g., `SEARCH_EF`) read from config; expose a server-only health page that echoes current constants. AC: `/admin/health` behind auth displays config values. 37. Create **diagnostic script** to validate Qdrant connectivity and payload schema for a test user. AC: CI step logs green.
 
-# Phase 5 — Billing, Webhooks, Redirect Tracking
+# Phase 5 — Redirect Tracking & Events
 
-38. Build **pricing page** that consumes Polar SDK product/price; checkout button redirects to Polar; success → `/success`. AC: Test checkout in sandbox succeeds.
-39. Implement **Convex HTTP route **``; verify Polar signature; upsert subscription state; idempotent handling. AC: Replay of same event is a no-op (200).
-40. Enforce **entitlement gating** on server for dashboard/API; unauthorized returns 402/redirect to `subscription-required`. AC: Paid vs. unpaid paths verified.
 41. Implement **tracked redirect** `` (Convex HTTP action): increment `clickCount` server-side then **302** to stored normalized URL; prevent open-redirect. AC: Only known bookmark URLs are used.
-42. Add **success page** `/success` and surface subscription status component in dashboard (manage portal link). AC: Customer portal opens via action.
 43. Instrument **PostHog** events: views, add URL attempts, success/failure, AI search clicks, drawer saves, redirect clicks. AC: Dashboard shows events by user.
 
 # Phase 6 — Tests, Observability, Polish & Launch
 
 44. **Unit tests**: `urlNormalization`; grapheme-count limit; retry/backoff; MMR edge cases (ties/diversity); **Qdrant user filter enforcement** (reject unfiltered). AC: All green in CI.
-45. **E2E (Playwright)**: happy ingest; error + retry; keyword + AI search with thresholding; drawer edit + hotkeys; `` increments & redirects; billing gate + webhook flow. AC: All specs pass in CI against Preview.
+45. **E2E (Playwright)**: happy ingest; error + retry; keyword + AI search with thresholding; drawer edit + hotkeys; `` increments & redirects. AC: All specs pass in CI against Preview.
 46. **Observability**: integrate **Sentry** for server exceptions (fetch, summarize, embed, Qdrant ops) with PII scrubbing; **PostHog** dashboards for core funnels. AC: Sentry receives test error; dashboards populated.
 47. **Performance & A11y**: run Lighthouse/Axe; ensure focus-visible, labels, landmarks, AA contrast; confirm perf budgets (**keyword P95 ≤120ms**, **ingest P50 ≤8s/P90 ≤15s**). AC: Reports stored in CI artifacts.
-48. **Release checklist**: verify all secrets present; Polar webhook verified; Qdrant collection live; **rate limits enforced**; default sort correct; hotkeys functional; landing copy/price accurate. AC: Checklist PR approved.
+48. **Release checklist**: verify all secrets present; Qdrant collection live; **rate limits enforced**; default sort correct; hotkeys functional. AC: Checklist PR approved.
 49. **Production launch**: set custom domain; promote Vercel Production; rotate temporary keys; switch Polar to live mode; final smoke test. AC: 200 OK on landing and gated dashboard works for paid user.
 50. **Post-launch guardrails**: set alert for ≥5 summarization errors/min → show banner toast; schedule monthly Qdrant key rotation; weekly metadata/emb failure review; backup Convex ids & Qdrant payload pointers. AC: Alerts firing on synthetic test; runbook documented.
